@@ -1,6 +1,6 @@
 # WinHDRProfileApplier
 
-Small per-user Windows helper for the Windows 11 HDR Calibration profile reload bug.
+Small per-user Windows helper that makes sure the Windows 11 HDR Calibration profile is reapplied at login and after HDR/display/session changes.
 
 When HDR is toggled with `Win + Alt + B`, Windows can leave the active HDR calibration profile stale until Display Settings is opened. This helper waits in the current user session, watches display/session/power events, and runs Windows' built-in color calibration loader only when HDR is currently enabled on at least one display.
 
