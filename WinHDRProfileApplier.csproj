@@ -5,8 +5,8 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>WinHDRSettingFix</AssemblyName>
-    <RootNamespace>WinHDRSettingFix</RootNamespace>
+    <AssemblyName>WinHDRProfileApplier</AssemblyName>
+    <RootNamespace>WinHDRProfileApplier</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 </Project>

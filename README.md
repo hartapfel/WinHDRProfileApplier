@@ -1,4 +1,4 @@
-# WinHDRSettingFix
+# WinHDRProfileApplier
 
 Small per-user Windows helper for the Windows 11 HDR Calibration profile reload bug.
 
@@ -15,37 +15,37 @@ dotnet build -c Release
 Install the helper to start at logon. It tries Task Scheduler first and falls back to the current user's `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` startup entry if Task Scheduler is locked down:
 
 ```powershell
-.\bin\Release\net10.0-windows\WinHDRSettingFix.exe --install
+.\bin\Release\net10.0-windows\WinHDRProfileApplier.exe --install
 ```
 
 Start it now:
 
 ```powershell
-Start-Process .\bin\Release\net10.0-windows\WinHDRSettingFix.exe
+Start-Process .\bin\Release\net10.0-windows\WinHDRProfileApplier.exe
 ```
 
 Run a one-shot refresh test:
 
 ```powershell
-.\bin\Release\net10.0-windows\WinHDRSettingFix.exe --run-once
+.\bin\Release\net10.0-windows\WinHDRProfileApplier.exe --run-once
 ```
 
 Show detected HDR state:
 
 ```powershell
-.\bin\Release\net10.0-windows\WinHDRSettingFix.exe --status
+.\bin\Release\net10.0-windows\WinHDRProfileApplier.exe --status
 ```
 
 Run the watcher in the foreground for debugging:
 
 ```powershell
-.\bin\Release\net10.0-windows\WinHDRSettingFix.exe --foreground
+.\bin\Release\net10.0-windows\WinHDRProfileApplier.exe --foreground
 ```
 
 Uninstall the startup entry:
 
 ```powershell
-.\bin\Release\net10.0-windows\WinHDRSettingFix.exe --uninstall
+.\bin\Release\net10.0-windows\WinHDRProfileApplier.exe --uninstall
 ```
 
 ## Notes
@@ -55,5 +55,5 @@ Uninstall the startup entry:
 - If your system still requires the Display Settings workaround, run with `--open-settings-fallback`. The installed task can include that flag by installing with:
 
 ```powershell
-.\bin\Release\net10.0-windows\WinHDRSettingFix.exe --install --open-settings-fallback
+.\bin\Release\net10.0-windows\WinHDRProfileApplier.exe --install --open-settings-fallback
 ```

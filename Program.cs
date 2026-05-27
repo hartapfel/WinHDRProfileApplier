@@ -2,11 +2,11 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
 
-namespace WinHDRSettingFix;
+namespace WinHDRProfileApplier;
 
 internal static class Program
 {
-    private const string MutexName = @"Local\WinHDRSettingFix";
+    private const string MutexName = @"Local\WinHDRProfileApplier";
 
     [STAThread]
     private static int Main(string[] args)
@@ -100,15 +100,15 @@ internal static class Program
 
     private static void PrintHelp()
     {
-        Console.WriteLine("WinHDRSettingFix");
+        Console.WriteLine("WinHDRProfileApplier");
         Console.WriteLine();
         Console.WriteLine("Usage:");
-        Console.WriteLine("  WinHDRSettingFix.exe                         Run hidden event watcher");
-        Console.WriteLine("  WinHDRSettingFix.exe --install               Install per-user logon task");
-        Console.WriteLine("  WinHDRSettingFix.exe --uninstall             Remove logon task");
-        Console.WriteLine("  WinHDRSettingFix.exe --run-once              Refresh now if HDR is enabled");
-        Console.WriteLine("  WinHDRSettingFix.exe --run-once --force      Refresh now regardless of HDR state");
-        Console.WriteLine("  WinHDRSettingFix.exe --status                Print active display HDR state");
+        Console.WriteLine("  WinHDRProfileApplier.exe                         Run hidden event watcher");
+        Console.WriteLine("  WinHDRProfileApplier.exe --install               Install per-user logon task");
+        Console.WriteLine("  WinHDRProfileApplier.exe --uninstall             Remove logon task");
+        Console.WriteLine("  WinHDRProfileApplier.exe --run-once              Refresh now if HDR is enabled");
+        Console.WriteLine("  WinHDRProfileApplier.exe --run-once --force      Refresh now regardless of HDR state");
+        Console.WriteLine("  WinHDRProfileApplier.exe --status                Print active display HDR state");
         Console.WriteLine();
         Console.WriteLine("Options:");
         Console.WriteLine("  --open-settings-fallback   Also open Display Settings after running the loader");
@@ -238,7 +238,7 @@ internal sealed class HdrProfileWatchWindow : NativeWindow, IDisposable
         this.refresher = refresher;
         this.options = options;
 
-        CreateHandle(new CreateParams { Caption = "WinHDRSettingFix" });
+        CreateHandle(new CreateParams { Caption = "WinHDRProfileApplier" });
         _ = NativeMethods.WTSRegisterSessionNotification(Handle, NativeMethods.NOTIFY_FOR_THIS_SESSION);
 
         SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
@@ -485,9 +485,11 @@ internal readonly record struct CalibrationLoaderComResult(bool Success, string 
 
 internal static class StartupTask
 {
-    private const string TaskName = "WinHDRSettingFix";
+    private const string TaskName = "WinHDRProfileApplier";
+    private const string LegacyTaskName = "WinHDRSettingFix";
     private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
-    private const string RunValueName = "WinHDRSettingFix";
+    private const string RunValueName = "WinHDRProfileApplier";
+    private const string LegacyRunValueName = "WinHDRSettingFix";
 
     public static int Install(AppOptions options)
     {
@@ -504,7 +506,8 @@ internal static class StartupTask
         {
             Console.WriteLine(result.Output.Trim());
             Console.WriteLine($"Installed logon task '{TaskName}'.");
-            RemoveRunKey();
+            RemoveRunKey(RunValueName);
+            RemoveRunKey(LegacyRunValueName);
             return 0;
         }
 
@@ -528,6 +531,7 @@ internal static class StartupTask
     public static int Uninstall()
     {
         var result = RunSchtasks($"/Delete /TN \"{TaskName}\" /F");
+        var legacyTaskResult = RunSchtasks($"/Delete /TN \"{LegacyTaskName}\" /F");
         if (!string.IsNullOrWhiteSpace(result.Output))
         {
             Console.WriteLine(result.Output.Trim());
@@ -538,26 +542,39 @@ internal static class StartupTask
             Console.WriteLine($"Removed logon task '{TaskName}'.");
         }
 
-        var removedRunKey = RemoveRunKey();
+        if (legacyTaskResult.ExitCode == 0)
+        {
+            Console.WriteLine($"Removed legacy logon task '{LegacyTaskName}'.");
+        }
+
+        var removedRunKey = RemoveRunKey(RunValueName);
+        var removedLegacyRunKey = RemoveRunKey(LegacyRunValueName);
         if (removedRunKey)
         {
             Console.WriteLine($"Removed HKCU Run startup value '{RunValueName}'.");
         }
 
-        return result.ExitCode == 0 || removedRunKey ? 0 : result.ExitCode;
+        if (removedLegacyRunKey)
+        {
+            Console.WriteLine($"Removed legacy HKCU Run startup value '{LegacyRunValueName}'.");
+        }
+
+        return result.ExitCode == 0 || legacyTaskResult.ExitCode == 0 || removedRunKey || removedLegacyRunKey
+            ? 0
+            : result.ExitCode;
     }
 
-    private static bool RemoveRunKey()
+    private static bool RemoveRunKey(string valueName)
     {
         try
         {
             using var runKey = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true);
-            if (runKey?.GetValue(RunValueName) is null)
+            if (runKey?.GetValue(valueName) is null)
             {
                 return false;
             }
 
-            runKey.DeleteValue(RunValueName, throwOnMissingValue: false);
+            runKey.DeleteValue(valueName, throwOnMissingValue: false);
             return true;
         }
         catch
@@ -687,10 +704,10 @@ internal static class Logger
         {
             var directory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "WinHDRSettingFix");
+                "WinHDRProfileApplier");
             Directory.CreateDirectory(directory);
 
-            var path = Path.Combine(directory, "WinHDRSettingFix.log");
+            var path = Path.Combine(directory, "WinHDRProfileApplier.log");
             lock (Gate)
             {
                 File.AppendAllText(path, $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}");
